@@ -1,0 +1,6 @@
+resources:
+- ../../base
+
+replicas:
+- name: nginx-kustomize
+  count: 4
