@@ -74,3 +74,52 @@ kubectl get pods
 ### Part 2 — Using Kustomize with ArgoCD
 
 Now we create environment configurations.
+
+ ### STEP 2  Create Base Deployment
+
+base/deployment.yaml
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-kustomize
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+```
+
+### Step 3  Base Kustomization File
+
+base/kustomization.yaml
+
+```
+resources:
+- deployment.yaml
+- service.yaml
+```
+
+### Step 4  Dev Overlay
+
+overlays/dev/kustomization.yaml
+
+```
+resources:
+- ../../base
+
+replicas:
+- name: nginx-kustomize
+  count: 2
+```
