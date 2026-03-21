@@ -253,3 +253,86 @@ kubectl apply -f application.yaml
 ```
 kubectl get configmap my-config -n argocd -o yaml
 ```
+
+### Customizing Resource Management and Sync policiesin ArgoCd
+
+#### Step 1 Configure Ignore Differences
+
+Run this command to edit ArgoCD config:
+```
+kubectl edit configmap argocd-cm -n argocd
+```
+
+Add this inside data: section
+
+```
+data:
+  resource.customizations: |
+    networking.k8s.io/Ingress:
+      ignoreDifferences: |
+        jsonPointers:
+        - /metadata/annotations
+```
+
+#### STEP 2 Resource Customization (Health Check)
+
+This allows ArgoCD to understand resource health 
+
+Add this ALSO under data: in same ConfigMap
+```
+  resource.customizations.health.mygroup_MyResource: |
+    hs = {}
+    if obj.status ~= nil then
+      if obj.status.condition == "Ready" then
+        hs.status = "Healthy"
+        hs.message = "Resource is ready"
+      else
+        hs.status = "Progressing"
+        hs.message = "Waiting for readiness"
+      end
+    else
+      hs.status = "Unknown"
+    end
+    return hs
+```
+#### STEP 3  Sync Policy  Automated
+
+Edit your Application:
+
+```
+kubectl edit application avp-demo -n argocd
+```
+
+**Add this**
+```
+spec:
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+```
+
+STEP 4  Apply Changes
+
+Restart ArgoCD components:
+
+```
+kubectl rollout restart deployment argocd-repo-server -n argocd
+kubectl rollout restart deployment argocd-server -n argocd
+```
+
+**STEP 5 Test It**
+
+Modify an Ingress annotation manually:
+
+```
+kubectl annotate ingress <your-ingress> test=123 --overwrite
+```
+
+Test Auto Sync
+- Change something in GitHub
+- Push:
+  ```
+  git commit -am "test sync"
+  git push
+  ```
